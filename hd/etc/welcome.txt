@@ -14,7 +14,10 @@
 <div class="container">
 %include;hed
 %define;book_of(xx)[book of %s:::xx]%end;
-%define;display_sosa_ref(xx)[*sosa reference: %t:::xx]%end;
+%define;display_sosa_ref(xx)
+  [*sosa reference][:]
+  <href="%prefix;%sosa_ref.access;">%sosa_ref;</a>
+%end;
 %define;get_visitor_access_msg(lg)
   %if;(b.visitor_access_msg_lg!="")
     %b.visitor_access_msg_lg;
@@ -39,7 +42,7 @@
             %hidden;
             <div class="input-group mt-1 w-100">
               %(<label for="w" class="sr-only">[user/password/cancel]0:[user/password/cancel]1</label>%)
-              <input type="text" class="form-control" name="w" title="[wizard/wizards/friend/friends/exterior]2/[wizard/wizards/friend/friends/exterior]0"
+              <input type="password" class="form-control" name="w" title="[wizard/wizards/friend/friends/exterior]2/[wizard/wizards/friend/friends/exterior]0"
               placeholder="[user/password/cancel]0:[user/password/cancel]1" aria-label="password input" aria-describedby="username:password" autofocus>
               <div class="input-group-append">
                 <button type="submit" class="btn btn-primary">OK</button>
@@ -69,7 +72,10 @@
           %end;
           </div>
         %end;
-        %if;(user.ident!="")<span class="border border-%if;friend;primary%elseif;wizard;success%end; text-%if;friend;primary%elseif;wizard;success%end; rounded text-center mt-1 w-100 rounded-bottom" title="%if;wizard;[*wizard/wizards/friend/friends/exterior]0%elseif;friend;[*wizard/wizards/friend/friends/exterior]2%end; %user.ident;">%user.ident;</span>%end;
+        %if;(friend or wizard)<span class="border border-%if;friend;primary%elseif;wizard;success%end; text-%if;friend;primary%elseif;wizard;success%end; rounded text-center mt-1 w-100 rounded-bottom" title="%if;wizard;[*wizard/wizards/friend/friends/exterior]0%elseif;friend;[*wizard/wizards/friend/friends/exterior]2%end; %user.name;">
+          <a href="%prefix;m=S&n=%if;(user.key!="")%user.key;%else;%user.name;%end;"
+             class="text-%if;friend;primary%elseif;wizard;success%end; text-center">%user.name;</a>
+        </span>%end;
         %if;((wizard and (b.wizard_passwd_file!="" or b.wizard_passwd!=""))
           or (friend and (b.friend_passwd_file!="" or b.friend_passwd!="")))
           <a class="btn btn-outline-danger mt-1 w-100" href="%prefix;w=" role="button"><i class="fas fa-right-from-bracket mr-1" aria-hidden="true"></i>[*disconnect]</a>
@@ -289,7 +295,7 @@ fr: Les <strong>droits des magiciens</strong> sont actuellement <strong>suspendu
     %if;(plugins!="" and b.plugins!="")
       <div class="d-flex flex-column flex-lg-row justify-content-lg-center mt-2 mt-lg-4">
         <div class="h4 align-self-lg-center mr-lg-2">
-          <i class="fas fa-book fa-sm fa-fw text-secondary mr-1"></i>[*plugins][:]
+          [*plugins][:]
           <span class="small">%b.plugins;</span>
         </div>
       </div>

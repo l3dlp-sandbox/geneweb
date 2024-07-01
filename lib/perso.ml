@@ -1415,9 +1415,12 @@ and eval_simple_bool_var conf base env =
   function
   | "are_divorced" ->
       fam_check_aux (fun fam ->
-          match get_divorce fam with
-          | Divorced _ -> true
-          | NotDivorced | Separated -> false)
+          match get_divorce fam with Divorced _ -> true | _ -> false)
+  | "are_separated" ->
+      fam_check_aux (fun fam ->
+          match get_separation fam with
+          | Separated _ | Separated_old -> true
+          | _ -> false)
   | "are_engaged" -> check_relation (( = ) Engaged)
   | "are_married" ->
       check_relation (function
@@ -1432,11 +1435,8 @@ and eval_simple_bool_var conf base env =
   | "are_marriage_contract" -> check_relation (( = ) MarriageContract)
   | "are_marriage_license" -> check_relation (( = ) MarriageLicense)
   | "are_residence" -> check_relation (( = ) Residence)
-  | "are_separated" -> fam_check_aux (fun fam -> get_divorce fam = Separated)
   | "browsing_with_sosa_ref" -> (
-      match get_env "sosa_ref" env with
-      | Vsosa_ref v -> v <> None
-      | _ -> raise Not_found)
+      match get_env "sosa_ref" env with Vsosa_ref v -> v <> None | _ -> false)
   | "has_comment" | "has_fnotes" -> (
       match get_env "fam" env with
       | Vfam (_, fam, _, m_auth) when mode_local env ->
@@ -1545,10 +1545,58 @@ and eval_simple_str_var conf base env (p, p_auth) = function
       | Vfam (_, fam, _, m_auth) when mode_local env -> (
           match get_divorce fam with
           | Divorced d -> (
+              let d = Date.od_of_cdate d in
+              match d with
+              | Some d when m_auth ->
+                  DateDisplay.string_of_ondate ~link:false conf d |> safe_val
+              | _ -> null_val)
+          | _ -> null_val)
+      | _ -> (
+          match get_env "fam_link" env with
+          | Vfam (_, fam, _, m_auth) -> (
+              match get_divorce fam with
+              | Divorced d -> (
+                  let d = Date.od_of_cdate d in
+                  match d with
+                  | Some d when m_auth ->
+                      DateDisplay.string_of_ondate ~link:false conf d
+                      |> safe_val
+                  | _ -> null_val)
+              | _ -> null_val)
+          | _ -> raise Not_found))
+  | "separation_date" -> (
+      match get_env "fam" env with
+      | Vfam (_, fam, _, m_auth) when mode_local env -> (
+          match get_separation fam with
+          | Separated d -> (
+              let d = Date.od_of_cdate d in
+              match d with
+              | Some d when m_auth ->
+                  DateDisplay.string_of_ondate ~link:false conf d |> safe_val
+              | _ -> null_val)
+          | _ -> null_val)
+      | _ -> (
+          match get_env "fam_link" env with
+          | Vfam (_, fam, _, m_auth) -> (
+              match get_separation fam with
+              | Separated d -> (
+                  let d = Date.od_of_cdate d in
+                  match d with
+                  | Some d when m_auth ->
+                      DateDisplay.string_of_ondate ~link:false conf d
+                      |> safe_val
+                  | _ -> null_val)
+              | _ -> null_val)
+          | _ -> raise Not_found))
+  | "on_divorce_date" -> (
+      match get_env "fam" env with
+      | Vfam (_, fam, _, m_auth) when mode_local env -> (
+          match get_divorce fam with
+          | Divorced d -> (
               match date_aux conf m_auth d with
               | VVstring s when s <> "" -> VVstring ("<em>" ^ s ^ "</em>")
               | x -> x)
-          | NotDivorced | Separated -> raise Not_found)
+          | _ -> null_val)
       | _ -> (
           match get_env "fam_link" env with
           | Vfam (_, fam, _, m_auth) -> (
@@ -1557,7 +1605,26 @@ and eval_simple_str_var conf base env (p, p_auth) = function
                   match date_aux conf m_auth d with
                   | VVstring s when s <> "" -> VVstring ("<em>" ^ s ^ "</em>")
                   | x -> x)
-              | NotDivorced | Separated -> raise Not_found)
+              | _ -> null_val)
+          | _ -> raise Not_found))
+  | "on_separation_date" -> (
+      match get_env "fam" env with
+      | Vfam (_, fam, _, m_auth) when mode_local env -> (
+          match get_separation fam with
+          | Separated d -> (
+              match date_aux conf m_auth d with
+              | VVstring s when s <> "" -> VVstring ("<em>" ^ s ^ "</em>")
+              | x -> x)
+          | _ -> null_val)
+      | _ -> (
+          match get_env "fam_link" env with
+          | Vfam (_, fam, _, m_auth) -> (
+              match get_separation fam with
+              | Separated d -> (
+                  match date_aux conf m_auth d with
+                  | VVstring s when s <> "" -> VVstring ("<em>" ^ s ^ "</em>")
+                  | x -> x)
+              | _ -> null_val)
           | _ -> raise Not_found))
   | "slash_divorce_date" -> (
       match get_env "fam" env with
@@ -1569,7 +1636,19 @@ and eval_simple_str_var conf base env (p, p_auth) = function
               | Some d when m_auth ->
                   DateDisplay.string_slash_of_date conf d |> safe_val
               | _ -> null_val)
-          | NotDivorced | Separated -> raise Not_found)
+          | _ -> null_val)
+      | _ -> raise Not_found)
+  | "slash_separation_date" -> (
+      match get_env "fam" env with
+      | Vfam (_, fam, _, m_auth) -> (
+          match get_separation fam with
+          | Separated d -> (
+              let d = Date.od_of_cdate d in
+              match d with
+              | Some d when m_auth ->
+                  DateDisplay.string_slash_of_date conf d |> safe_val
+              | _ -> null_val)
+          | _ -> null_val)
       | _ -> raise Not_found)
   | "empty_sorted_list" -> (
       match get_env "list" env with
@@ -1604,7 +1683,7 @@ and eval_simple_str_var conf base env (p, p_auth) = function
   | "family_cnt" -> (
       match get_env "family_cnt" env with
       | Vint x -> string_of_int x |> str_val
-      | _ -> null_val)
+      | _ -> "0" |> str_val)
   | "first_name_alias" -> (
       match get_env "first_name_alias" env with
       | Vstring s -> s |> Util.escape_html |> safe_val
@@ -2250,7 +2329,7 @@ and eval_compound_var conf base env ((a, _) as ep) loc = function
       | Vsosa_ref (Some p) ->
           let ep = make_ep conf base (get_iper p) in
           eval_person_field_var conf base env ep loc sl
-      | _ -> raise Not_found)
+      | _ -> null_val)
   | "spouse" :: sl -> (
       match get_env "fam" env with
       | Vfam (_, _, (_, _, ip), _) when mode_local env ->
@@ -2812,6 +2891,21 @@ and eval_person_field_var conf base env ((p, p_auth) as ep) loc = function
           in
           VVbool r
       | _ -> raise Not_found)
+  | [ "linked_pages_nbr" ] -> (
+      match get_env "nldb" env with
+      | Vnldb db ->
+          let r =
+            if p_auth then
+              let key =
+                let fn = Name.lower (sou base (get_first_name p)) in
+                let sn = Name.lower (sou base (get_surname p)) in
+                (fn, sn, get_occ p)
+              in
+              string_of_int (List.length (links_to_ind conf base db key))
+            else "0"
+          in
+          str_val r
+      | _ -> str_val "0")
   | [ "has_sosa" ] -> (
       match get_env "p_link" env with
       | Vbool _ -> VVbool false
@@ -2851,7 +2945,7 @@ and eval_person_field_var conf base env ((p, p_auth) as ep) loc = function
           match Date.od_of_cdate (get_marriage fam) with
           | Some d -> eval_date_field_var conf d sl
           | None -> null_val)
-      | _ -> raise Not_found)
+      | _ -> null_val)
   | "mother" :: sl -> (
       match get_parents p with
       | Some ifam ->
@@ -3141,8 +3235,8 @@ and eval_bool_person_field conf base env (p, p_auth) = function
   | "wedding_birthday" -> (
       match get_env "fam" env with
       | Vfam (_, fam, _, m_auth) -> (
-          match (get_relation fam, get_divorce fam) with
-          | (Married | NoSexesCheckMarried), NotDivorced -> (
+          match (get_relation fam, get_divorce fam, get_separation fam) with
+          | (Married | NoSexesCheckMarried), NotDivorced, NotSeparated -> (
               match (m_auth, Date.cdate_to_dmy_opt (get_marriage fam)) with
               | true, Some d ->
                   let father = pget conf base (get_father fam) in
@@ -5415,7 +5509,7 @@ let interp_templ_with_menu = gen_interp_templ true
 
 let interp_notempl_with_menu title templ_fname conf base p =
   (* On envoie le header car on n'est pas dans un template (exple: merge). *)
-  Hutil.header_without_page_title conf title;
+  Hutil.header_with_title conf title;
   gen_interp_templ true title templ_fname conf base p
 
 (* Main *)
@@ -5452,6 +5546,7 @@ let print_what_links conf base p =
       transl conf "linked pages" |> Utf8.capitalize_fst
       |> Output.print_sstring conf;
       Util.transl conf ":" |> Output.print_sstring conf;
+      Output.print_sstring conf " ";
       if h then Output.print_string conf (simple_person_text conf base p true)
       else (
         Output.print_sstring conf {|<a href="|};
@@ -5462,7 +5557,6 @@ let print_what_links conf base p =
         Output.print_sstring conf {|</a>|})
     in
     Hutil.header conf title;
-    Hutil.print_link_to_welcome conf true;
     NotesDisplay.print_linked_list conf base pgl;
     Hutil.trailer conf)
   else Hutil.incorrect_request conf
